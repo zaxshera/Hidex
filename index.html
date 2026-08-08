@@ -167,7 +167,7 @@
     <div class="eyebrow">What's new</div>
     <h2>Updates &amp; releases</h2>
 
-    <div class="updateList">
+    <div class="updateList" id="updateList">
       <div class="updateItem">
         <div><span class="updateTag">v3.0 · Current</span></div>
         <div class="updateBody">
@@ -319,6 +319,56 @@ if (window.QRCode) {
     colorLight: "#ffffff"
   });
 }
+</script>
+
+<!-- ---- Live "What's new" feed, published from the admin dashboard ----
+     Falls back to the static list above if this can't load (offline,
+     ad-blocker, etc.) so the section is never empty. -->
+<script type="module">
+  import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getFirestore, collection, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAugA_Z6ujDv1QCT3PgrDfpPTI9G06Zbeo",
+    authDomain: "hidex-5577e.firebaseapp.com",
+    projectId: "hidex-5577e",
+    storageBucket: "hidex-5577e.firebasestorage.app",
+    messagingSenderId: "407768471644",
+    appId: "1:407768471644:web:a6c4651d733bc0ae40ee99"
+  };
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  (async () => {
+    try {
+      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const snap = await getDocs(query(collection(db, "updates"), orderBy("order", "desc")));
+
+      if (snap.empty) return; // keep the static fallback content
+
+      let html = "";
+      snap.forEach((docSnap) => {
+        const u = docSnap.data();
+        html += `
+          <div class="updateItem">
+            <div><span class="updateTag">${escapeHtml(u.tag || "Update")}</span></div>
+            <div class="updateBody">
+              <h4>${escapeHtml(u.title || "")}</h4>
+              <p>${escapeHtml(u.description || "")}</p>
+              <ul>${(u.features || []).map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+            </div>
+          </div>`;
+      });
+
+      document.getElementById("updateList").innerHTML = html;
+    } catch (error) {
+      console.error("Live updates unavailable, showing static list:", error);
+    }
+  })();
 </script>
 
 </body>
